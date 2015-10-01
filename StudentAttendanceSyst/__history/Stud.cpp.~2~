@@ -1,0 +1,286 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "Stud.h"
+#include "Home.h"
+#include "DMStudentDB.h"
+#include "System.DateUtils.hpp"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TfrmStud *frmStud;
+//---------------------------------------------------------------------------
+__fastcall TfrmStud::TfrmStud(TComponent* Owner)
+	: TForm(Owner)
+{
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmStud::FormResize(TObject *Sender)
+{
+		//PageControl1->Top=50;
+	PageControl1->Left=300;
+	//PageControl1->Width=PageControl1->Width+100;
+	PageControl1->Height=this->Height-100;
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmStud::TabSheet1Show(TObject *Sender)
+{
+
+	PanelTodayClasses->Visible=0;
+	  //Panel2->Width=Panel1->Width;
+
+	edtEmail->Clear();
+	edtLectName->Clear();
+	edtOfficeNum->Clear();
+	edtStartTime->Clear();
+	edtSubjName->Clear();
+	edtTellNo->Clear();
+	edtVenue->Clear();
+
+	RadioGroupAcknLadge->ItemIndex=-1;
+	RichEditConcept->Clear();
+
+	ComboBoxRating->Clear();
+	ComboBoxRating->Items->Add("1 Bad");
+	ComboBoxRating->Items->Add("2 Not Bad");
+	ComboBoxRating->Items->Add("3 Average");
+	ComboBoxRating->Items->Add("4 Good");
+	ComboBoxRating->Items->Add("5 Excellent");
+
+	ackn=0;
+	rating=0;
+
+	studNumber=frmHome->edtNumber->Text.Trim();
+
+
+
+	//select subject that a studnet is enbroled in and there are classes for that subject created
+	DataModuleStudentDB->ADODataSetSubjClass->Active=0;
+	DataModuleStudentDB->ADODataSetSubjClass->Connection=DataModuleStudentDB->ADOConnectionStudentDB;
+	DataModuleStudentDB->ADODataSetSubjClass->CommandText="SELECT * FROM Student_Subject SB,Class_Lecture "
+	" CL,Class C WHERE C.ClassID=CL.ClassID AND C.SubjectCode=SB.SubjectCode AND CL.Cancelled='No' AND Active='Yes' AND studentNumber=:studNum AND Day=:cDay";
+	DataModuleStudentDB->ADODataSetSubjClass-> Parameters->ParamByName("studNum")->Value=studNumber.Trim();
+	DataModuleStudentDB->ADODataSetSubjClass-> Parameters->ParamByName("cDay")->Value=FormatDateTime("dddd",Now());
+	DataModuleStudentDB->DataSourceSubjClass->DataSet=DataModuleStudentDB->ADODataSetSubjClass;
+	DataModuleStudentDB->ADODataSetSubjClass->Active=1;
+
+   //	ShowMessage(IntToStr(DataModuleStudentDB->ADODataSetSubjClass->RecordCount));
+	   //	ShowMessage(FormatDateTime("dddd",Now()));
+   // ShowMessage(FormatDateTime("yyyy-mm-dd",Date()));
+	if(DataModuleStudentDB->ADODataSetSubjClass->RecordCount==1)
+	{
+	//TIME WILL BE TAKEN FROM ATTENDANCE IF ALREADY SIGNED FOR REGISTERE ELSE AT CURRENT TIME OF LOGIN
+
+		String nxtCla=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("Time")->AsString.Trim();
+	   TDateTime nextClassTime=StrToDateTime(nxtCla);
+	   //	ShowMessage(nxtCla);
+	   //	ShowMessage(FormatDateTime("hh:nn AM/PM", IncHour(nextClassTime, 1)-nextClassTime));
+	   if (nextClassTime<=IncHour(nextClassTime, 1)&&Now()<=IncHour(nextClassTime, 1) ) {
+
+			edtSubjName->Text=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("C.SubjectCode")->AsString.Trim();
+			edtStartTime->Text=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("Time")->AsString.Trim();
+			RichEditConcept->Text=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("Concept")->AsString.Trim();
+			edtVenue->Text=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("Venue")->AsString.Trim();;
+			Panel1->Caption="Syudent Number: "+studNumber+" You Were Successfully Marked Present At "+ FormatDateTime("HH:MM",Now());
+			Panel2->Visible=1;
+
+
+
+		  //	ShowMessage("class in progress: " +FormatDateTime("00:nn", nextClassTime-Now()));
+
+	   }//a class is only active during its current period  otherwise student is
+	   //marked absent if class is cancelled student will be automatically marked present when lecture cancells it
+	   /*	else{
+
+			DataModuleStudentDB->ADODataSetSubjClass->Active=0;
+			DataModuleStudentDB->ADODataSetSubjClass->Connection=DataModuleStudentDB->ADOConnectionStudentDB;
+			DataModuleStudentDB->ADODataSetSubjClass->CommandText="SELECT * FROM Student_Subject SB,Class_Lecture "
+			" CL,Class C WHERE C.ClassID=CL.ClassID AND C.SubjectCode=SB.SubjectCode AND Active='No' AND studentNumber=:studNum AND Day=:cDay AND ClassDate=:clsDate ORDER BY C.SubjectCode ";
+			DataModuleStudentDB->ADODataSetSubjClass-> Parameters->ParamByName("studNum")->Value=studNumber.Trim();
+			DataModuleStudentDB->ADODataSetSubjClass-> Parameters->ParamByName("cDay")->Value=FormatDateTime("dddd",Now());
+			DataModuleStudentDB->ADODataSetSubjClass-> Parameters->ParamByName("clsDate")->Value=FormatDateTime("yyyy-mm-dd",Date());
+			DataModuleStudentDB->DataSourceSubjClass->DataSet=DataModuleStudentDB->ADODataSetSubjClass;
+
+			DataModuleStudentDB->ADODataSetSubjClass->Active=1;
+			DataModuleStudentDB->ADODataSetSubjClass->First();
+			TStringList *todayComing=new TStringList();
+			// ShowMessage(FormatDateTime("yyyy-mm-dd",Date()));
+			int counter=0;
+			StringGridTodaySubjs->DefaultColWidth=100;
+			StringGridTodaySubjs->ColCount=4;
+			StringGridTodaySubjs->RowCount=1;
+
+
+			StringGridTodaySubjs->Cells[0][0]="Subject Code";
+			StringGridTodaySubjs->Cells[1][0]="Venue";
+			StringGridTodaySubjs->Cells[2][0]="Time";
+		   //	StringGridTodaySubjs->Cells[3][0]="Day";
+			StringGridTodaySubjs->Cells[3][0]="Cancelled";
+
+
+			// ShowMessage(IntToStr(DataModuleStudentDB->ADODataSetSubjClass->FieldCount));
+			int row=1;
+			while(!DataModuleStudentDB->ADODataSetSubjClass->Eof){
+
+			 int currCell=0;
+			 String  nxtClsTime=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("Time")->AsString;
+			 String nxtClsDate=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("ClassDate")->AsString;
+			 TDateTime nextClassTime=StrToDateTime(nxtClsTime);
+
+
+
+			 if(nextClassTime>Now()&&StrToDateTime(nxtClsDate)==Date()){
+
+				for(int C=11;C<DataModuleStudentDB->ADODataSetSubjClass->FieldCount-1;C++){
+
+					StringGridTodaySubjs->Cells[currCell][row]=DataModuleStudentDB->ADODataSetSubjClass->Fields->FieldByNumber(C)->AsString;
+
+					 currCell++;
+				  }
+					TDateTime timeClss=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("Time")->AsDateTime;
+					StringGridTodaySubjs->Cells[currCell][row]=FormatDateTime("hh:nn Am/Pm",timeClss);
+					StringGridTodaySubjs->Cells[currCell+1][row]=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("CL.Cancelled")->AsString;
+				   row++;
+				}
+				StringGridTodaySubjs->RowCount=row;
+				DataModuleStudentDB->ADODataSetSubjClass->Next();
+			}
+
+
+
+			Panel2->Visible=0;
+
+
+		//now get todays subject  for this student since he does not have active subjects
+
+		PanelTodayClasses->Visible=1;
+		  //	ShowMessage("class ended at "+FormatDateTime("HH:nn", IncHour(nextClassTime, 1)));
+
+
+	   }
+	   */
+	}
+	else{
+
+	   DataModuleStudentDB->ADODataSetSubjClass->Active=0;
+			DataModuleStudentDB->ADODataSetSubjClass->Connection=DataModuleStudentDB->ADOConnectionStudentDB;
+			DataModuleStudentDB->ADODataSetSubjClass->CommandText="SELECT * FROM Student_Subject SB,Class_Lecture "
+			" CL,Class C WHERE C.ClassID=CL.ClassID AND C.SubjectCode=SB.SubjectCode AND Active='No' AND studentNumber=:studNum AND Day=:cDay AND ClassDate=:clsDate ORDER BY C.SubjectCode ";
+			DataModuleStudentDB->ADODataSetSubjClass-> Parameters->ParamByName("studNum")->Value=studNumber.Trim();
+			DataModuleStudentDB->ADODataSetSubjClass-> Parameters->ParamByName("cDay")->Value=FormatDateTime("dddd",Now());
+			DataModuleStudentDB->ADODataSetSubjClass-> Parameters->ParamByName("clsDate")->Value=FormatDateTime("yyyy-mm-dd",Date());
+			DataModuleStudentDB->DataSourceSubjClass->DataSet=DataModuleStudentDB->ADODataSetSubjClass;
+
+			DataModuleStudentDB->ADODataSetSubjClass->Active=1;
+			DataModuleStudentDB->ADODataSetSubjClass->First();
+			TStringList *todayComing=new TStringList();
+			// ShowMessage(FormatDateTime("yyyy-mm-dd",Date()));
+			int counter=0;
+			StringGridTodaySubjs->DefaultColWidth=100;
+			StringGridTodaySubjs->ColCount=4;
+			StringGridTodaySubjs->RowCount=1;
+
+
+			StringGridTodaySubjs->Cells[0][0]="Subject Code";
+			StringGridTodaySubjs->Cells[1][0]="Venue";
+			StringGridTodaySubjs->Cells[2][0]="Time";
+		   //	StringGridTodaySubjs->Cells[3][0]="Day";
+			StringGridTodaySubjs->Cells[3][0]="Cancelled";
+
+
+			// ShowMessage(IntToStr(DataModuleStudentDB->ADODataSetSubjClass->FieldCount));
+			int row=1;
+			while(!DataModuleStudentDB->ADODataSetSubjClass->Eof){
+
+			 int currCell=0;
+			 String  nxtClsTime=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("Time")->AsString;
+			 String nxtClsDate=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("ClassDate")->AsString;
+			 TDateTime nextClassTime=StrToDateTime(nxtClsTime);
+
+
+
+			 if(nextClassTime>Now()&&StrToDateTime(nxtClsDate)==Date()){
+
+				for(int C=11;C<DataModuleStudentDB->ADODataSetSubjClass->FieldCount-1;C++){
+
+					StringGridTodaySubjs->Cells[currCell][row]=DataModuleStudentDB->ADODataSetSubjClass->Fields->FieldByNumber(C)->AsString;
+
+					 currCell++;
+				  }
+					TDateTime timeClss=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("Time")->AsDateTime;
+					StringGridTodaySubjs->Cells[currCell][row]=FormatDateTime("hh:nn Am/Pm",timeClss);
+					StringGridTodaySubjs->Cells[currCell+1][row]=DataModuleStudentDB->ADODataSetSubjClass->FieldByName("CL.Cancelled")->AsString;
+				   row++;
+				}
+				StringGridTodaySubjs->RowCount=row;
+				DataModuleStudentDB->ADODataSetSubjClass->Next();
+			}
+
+
+		Panel1->Font->Color=clRed;
+
+		/***
+			* here we loop for next first subject on todays time table through strGrid cel[2][row]
+		*/
+		 int rowCount=0;
+		 int nextTimeRowIndex=1;
+		  TDate smallestClTime=Now();
+		for(int r=1;r<StringGridTodaySubjs->RowCount;r++){
+
+			for(int inner=r;inner<StringGridTodaySubjs->RowCount-1;inner++){
+
+			TTime subjTime1=StrToTime( StringGridTodaySubjs->Cells[2][r]);
+			TTime subjTime2=StrToTime(StringGridTodaySubjs->Cells[2][inner+1]);
+				   //ShowMessage(StringGridTodaySubjs->Cells[2][r]);
+				   //	ShowMessage(StringGridTodaySubjs->Cells[2][inner+1]);
+				if(smallestClTime>subjTime2){
+					smallestClTime=subjTime2;
+					nextTimeRowIndex=r+1;
+
+			   }
+			   else
+					 nextTimeRowIndex=r;
+			}
+		}
+
+	   //	ShowMessage("smallest time: "+TimeToStr(smallestClTime));
+		String nextSubjCode=StringGridTodaySubjs->Cells[0][nextTimeRowIndex];
+		Panel1->Caption="You Do Not Have An Active Class: Your Next Class Is "+nextSubjCode+" At "+TimeToStr(smallestClTime);
+
+		Panel2->Visible=0;
+
+
+		//now get todays subject  for this student since he does not have active subjects
+		  PanelTodayClasses->Visible=1;
+
+	   }
+
+
+
+
+
+
+
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmStud::Timer1Timer(TObject *Sender)
+{
+	StatusBar1->Panels->operator [](0)->Text=FormatDateTime("'Date  ' dddd, mmmm d, yyyy 'Time ' hh:mm:ssss AM/PM",Now());
+
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmStud::TabSheet1Resize(TObject *Sender)
+{
+	Panel1->Width=TabSheet1->Width;
+	//Panel2->Top=Panel1->Height+50;
+	Panel2->Width=Panel1->Width;
+	Panel2->Left=0;
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmStud::FormShow(TObject *Sender)
+{
+	PageControl1->ActivePage->OnShow(this);
+}
+//---------------------------------------------------------------------------

@@ -1,0 +1,31 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "StudTimeTable.h"
+#include "Home.h"
+#include "DMStudentDB.h"
+#include "System.SysUtils.hpp"
+#include "System.DateUtils.hpp"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TfrmTimeTable *frmTimeTable;
+//---------------------------------------------------------------------------
+__fastcall TfrmTimeTable::TfrmTimeTable(TComponent* Owner)
+	: TForm(Owner)
+{
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmTimeTable::FormShow(TObject *Sender)
+{
+
+	DataModuleStudentDB->ADODataSetAtend->Active=0;
+	DataModuleStudentDB->ADODataSetAtend->CommandText="SELECT c.SubjectCode,c.Time,c.Day FROM Class C,Student_Subject SB where SB.StudentNumber=:studNo AND SB.SubjectCode=C.SubjectCode";// AND ClassID=:cID AND ClassDate=:cDate";
+	DataModuleStudentDB->ADODataSetAtend->Parameters->ParamByName("studNo")->Value=frmHome->edtNumber->Text.Trim();
+  	DataModuleStudentDB->DataSourceAtend->DataSet=DataModuleStudentDB->ADODataSetAtend;
+	DataModuleStudentDB->ADODataSetAtend->Active=1;
+
+}
+//---------------------------------------------------------------------------

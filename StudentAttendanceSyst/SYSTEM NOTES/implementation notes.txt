@@ -1,0 +1,29 @@
+Things to be implementted:
+
+
+Modules
+========================================================================= 		Status
+																				=======
+
+
+Student Module:
+
+-view time table  																Done --Add vwnue to timetable
+-sign register                      											Done
+-view attendance history														DONE 
+
+Lecture Module:																	All Pendending
+-add student																	TO START
+-activate/deactivate student
+-view attendance history and export via csv file
+-insert/update(status to cancelled/not-cancelled not-active/active) a class
+-view time table
+-add students using .csv file
+-upload attendance via csv file
+
+
+Admin Module:																	All Pendending
+-add lecture/Student
+-deactivate/activate lecture/Student
+-add subject
+-view lecture/student history
